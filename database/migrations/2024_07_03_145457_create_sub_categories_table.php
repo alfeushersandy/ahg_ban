@@ -11,17 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('vehicles', function (Blueprint $table) {
+        Schema::create('sub_categories', function (Blueprint $table) {
             $table->id();
-            $table->string('nama_kendaraan');
-            $table->string('kode_kabin');
-            $table->string('nopol')->nullable();
-            $table->string('sn')->nullable();
-            $table->string('no_mesin')->nullable();
-            $table->string('no_rangka')->nullable();
+            $table->string('sub_kategori');
             $table->foreignId('kategori_id')->constrained('categories')->cascadeOnDelete();
-            $table->boolean('is_active')->default(true);
-            $table->integer('status')->default(1);
             $table->timestamps();
         });
     }
@@ -31,6 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('vehicles');
+        Schema::dropIfExists('sub_categories');
     }
 };

@@ -2,16 +2,20 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\VehiclesResource\Pages;
-use App\Filament\Resources\VehiclesResource\RelationManagers;
-use App\Models\Vehicle;
 use Filament\Forms;
-use Filament\Forms\Form;
-use Filament\Resources\Resource;
 use Filament\Tables;
+use App\Models\Vehicle;
+use Filament\Forms\Get;
+use Filament\Forms\Set;
+use Filament\Forms\Form;
 use Filament\Tables\Table;
+use App\Models\SubCategory;
+use Filament\Resources\Resource;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
+use App\Filament\Resources\VehiclesResource\Pages;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use App\Filament\Resources\VehiclesResource\RelationManagers;
 
 class VehiclesResource extends Resource
 {
@@ -33,8 +37,19 @@ class VehiclesResource extends Resource
                 Forms\Components\TextInput::make('no_mesin'),
                 Forms\Components\TextInput::make('no_rangka'),
                 Forms\Components\Select::make('kategori_id')
-                ->relationship('category', 'nama_kategori')
-                ->required(),
+                    ->relationship('category', 'nama_kategori')
+                    ->required()
+                    ->afterStateUpdated(function (Set $set) {
+                        $set('sub_category_id', null);
+                    })
+                    ->live(),
+                Forms\Components\Select::make('sub_kategori_id')
+                    ->options(fn (Get $get): Collection => SubCategory::query()
+                        ->where('kategori_id', $get('kategori_id'))
+                        ->pluck('sub_kategori', 'id'))
+                    ->required(),
+                Forms\Components\Select::make('profile_ban_id')
+                    ->relationship('tireProfile', 'name')
             ]);
     }
 
@@ -49,6 +64,7 @@ class VehiclesResource extends Resource
                 Tables\Columns\TextColumn::make('no_mesin'),
                 Tables\Columns\TextColumn::make('no_rangka'),
                 Tables\Columns\TextColumn::make('category.nama_kategori'),
+                Tables\Columns\TextColumn::make('tireProfile.name'),
             ])
             ->filters([
                 //
