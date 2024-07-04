@@ -7,6 +7,7 @@ use Filament\Forms;
 use Filament\Tables;
 use App\Models\Vehicle;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
 use App\Models\TireUsage;
 use Filament\Tables\Table;
 use App\Models\TirePosition;
@@ -31,42 +32,55 @@ class TireUsageResource extends Resource
                     ->relationship('vehicle', 'nama_kendaraan')
                     ->required()
                     ->live()
-                    ->afterStateUpdated(function ($state, callable $set) {
+                    ->afterStateUpdated(function ($state, callable $set, callable $get) {
                         $vehicle = Vehicle::find($state);
                         $set('max_tires', $vehicle?->tireProfile?->number_of_tires);
+                        $tireUsages = $get('tire_usages') ?? [];
+                        foreach ($tireUsages as &$usage) {
+                            $usage['vehicle_id'] = $state;
+                        }
+                        $set('tire_usages', $tireUsages);
                     }),
                 Forms\Components\DatePicker::make('usage_date')
                     ->required(),
                 Forms\Components\Repeater::make('tire_usages')
-                    ->schema([
-                        Forms\Components\Grid::make(2)
-                            ->schema([
+                    ->schema(fn (Get $get): array => [
                                 Forms\Components\Select::make('tire_id')
                                     ->relationship('tire', 'serial_number')
                                     ->searchable()
-                                    ->required()->columnSpan(1),
+                                    ->required(),
                                 Forms\Components\Select::make('position_id')
-                                    ->options(function (callable $get) {
-                                        $vehicle = $get('vehicle_id');
-                                        if (!$vehicle) {
+                                    ->options(function () use ($get) {
+                                        $vehicleId = $get('vehicle_id');
+                                        if (!$vehicleId) {
                                             return [];
                                         }
+                                        $vehicle = Vehicle::find($vehicleId);
                                         $tireProfileId = $vehicle->profile_ban_id;
-                                        dd($tireProfileId);
-                                        return TirePosition::where('tire_profile_id', $tireProfileId)
+                                        $allPositions = TirePosition::where('tire_profile_id', $tireProfileId)
                                             ->pluck('position', 'id')
                                             ->toArray();
+                                        $selectedPositions = collect($get('position_id') ?? [])
+                                            ->pluck('position_id')
+                                            ->toArray();
+                                        $filteredArray = array_diff_key($allPositions, array_flip($selectedPositions));
+
+                                        return $filteredArray;
                                     })
                                     ->live()
-                                    ->columnSpan(1),
-                            ])
+                                    ->required()
+                            
                     ])
                     ->minItems(1)
                     ->maxItems(function (callable $get) {
                         return $get('max_tires') ?? 1;
                     })
-                    ->afterStateHydrated(function ($state, callable $set) {
-                        $set('tire_usages_count', count($state));
+                    ->afterStateHydrated(function (callable $get, callable $set) {
+                        $tireUsages = $get('tire_usages') ?? [];
+                        foreach ($tireUsages as &$usage) {
+                            $usage['vehicle_id'] = $get('vehicle_id');
+                        }
+                        $set('tire_usages', $tireUsages);
                     })
                     ->rules([
                         fn (): Closure => function ($state, callable $get) {
@@ -75,7 +89,7 @@ class TireUsageResource extends Resource
                             }
                         },
                     ])
-                    ->columnSpanFull(),
+                    ->columns(2),
             ]);
     }
 

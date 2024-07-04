@@ -13,4 +13,9 @@ class TirePosition extends Model
     {
         return $this->belongsTo(TireProfile::class);
     }
+
+    public function tireUsages()
+    {
+        return $this->hasMany(TireUsage::class);
+    }
 }
